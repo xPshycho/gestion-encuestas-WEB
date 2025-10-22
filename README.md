@@ -1,4 +1,4 @@
-# Parcial-2: Sistema de Registro de Estudiantes
+# Aplicación Web de Gestión con Capacidad Offline y Georreferenciación
 
 ## Descripción
 
@@ -190,11 +190,3 @@ java -jar build/libs/parcial-2-1.0-SNAPSHOT-all.jar
 3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`).
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`).
 5. Abre un Pull Request.
-
-## Licencia
-
-Este proyecto es para fines educativos y no tiene una licencia específica.
-
-## Autor
-
-Desarrollado como parte del curso de Programación Web en PUCMM.
