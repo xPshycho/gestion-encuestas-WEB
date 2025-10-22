@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Registros - Sistema Académico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script th:src="@{'https://maps.googleapis.com/maps/api/js?key=' + ${googleMapsApiKey} + '&callback=initMap'}" async defer></script>
+    <style>
+        .legend {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+<!-- Header (igual que en dashboard) -->
+<header class="bg-blue-900 text-white p-4 flex items-center justify-between md:justify-start">
+    <button id="openSidebar" class="mr-4 md:hidden focus:outline-none">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+    <h1 class="text-xl font-bold">Sistema Académico</h1>
+</header>
+
+<div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar (igual que en dashboard) -->
+    <aside class="hidden md:flex flex-col w-64 bg-blue-900 text-white p-6">
+        <nav class="flex-1">
+            <ul class="space-y-2">
+                <li>
+                    <a href="/dashboard" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                        <span>🏠</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li th:if="${usuario != null and usuario.rol.name() == 'ADMINISTRADOR'}">
+                    <a href="/usuarios" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                        <span>📋</span>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/estudiantes" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                        <span>🎓</span>
+                        <span>Estudiantes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/registros" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                        <span>📝</span>
+                        <span>Registros</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" onclick="localStorage.removeItem('authUser');"
+                       class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                        <span>🚪</span>
+                        <span>Cerrar Sesión</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <div class="flex-1 flex flex-col">
+        <!-- Contenedor principal -->
+        <main class="flex-1 p-6 overflow-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Sección: Lista de Registros -->
+                <section>
+                    <h2 class="text-2xl font-semibold mb-4">Lista de Registros</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full bg-white rounded-lg shadow">
+                            <thead class="bg-blue-500 text-white">
+                            <tr>
+                                <th class="px-4 py-2">ID</th>
+                                <th class="px-4 py-2">Usuario</th>
+                                <th class="px-4 py-2">Estudiante</th>
+                            </tr>
+                            </thead>
+                            <tbody class="text-gray-700" th:each="registro : ${registros}">
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-2" th:text="${registro.id}">1</td>
+                                <td class="px-4 py-2" th:text="${registro.usuarioId}">usuario</td>
+                                <td class="px-4 py-2"
+                                    th:text="${estudianteData[registro.estudianteId] != null ? estudianteData[registro.estudianteId].nombre : 'No disponible'}">
+                                    Estudiante
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación -->
+                    <div class="mt-4 flex justify-center">
+                        <nav class="inline-flex -space-x-px">
+                            <a th:if="${currentPage > 1}" th:href="@{/registros(page=${currentPage - 1})}"
+                               class="py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700">
+                                Anterior
+                            </a>
+                            <span th:if="${currentPage == 1}"
+                                  class="py-2 px-3 leading-tight text-gray-300 bg-gray-200 border border-gray-300 rounded-l-lg">
+                      Anterior
+                </span>
+                            <th:block th:each="i : ${#numbers.sequence(1, totalPages)}">
+                                <a th:href="@{/registros(page=${i})}"
+                                   class="py-2 px-3 leading-tight border border-gray-300 hover:bg-gray-100 hover:text-gray-700"
+                                   th:classappend="${i == currentPage} ? ' bg-blue-500 text-white' : ' text-gray-500 bg-white'">
+                                    [[${i}]]
+                                </a>
+                            </th:block>
+                            <a th:if="${currentPage < totalPages}" th:href="@{/registros(page=${currentPage + 1})}"
+                               class="py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700">
+                                Siguiente
+                            </a>
+                            <span th:if="${currentPage == totalPages}"
+                                  class="py-2 px-3 leading-tight text-gray-300 bg-gray-200 border border-gray-300 rounded-r-lg">
+                      Siguiente
+                </span>
+                        </nav>
+                    </div>
+                </section>
+
+                <!-- Sección: Mapa -->
+                <section>
+                    <h2 class="text-2xl font-semibold mb-4">Ubicaciones en el Mapa</h2>
+                    <div id="map" class="w-full h-96 rounded-lg shadow"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Menú overlay para pantallas pequeñas -->
+<div id="overlayMenu" class="fixed inset-0 bg-blue-900 text-white p-6 transform -translate-x-full transition-transform duration-300 z-50 md:hidden">
+    <button id="closeSidebar" class="absolute top-4 right-4 text-white focus:outline-none">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+             viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+    <nav class="mt-10">
+        <ul class="space-y-4">
+            <li>
+                <a href="/dashboard" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                    <span>🏠</span>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li th:if="${usuario != null and usuario.rol.name() == 'ADMINISTRADOR'}">
+                <a href="/usuarios" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                    <span>📋</span>
+                    <span>Usuarios</span>
+                </a>
+            </li>
+            <li>
+                <a href="/estudiantes" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                    <span>🎓</span>
+                    <span>Estudiantes</span>
+                </a>
+            </li>
+            <li>
+                <a href="/registros" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                    <span>📝</span>
+                    <span>Registros</span>
+                </a>
+            </li>
+            <li>
+                <a href="/logout" onclick="localStorage.removeItem('authUser');" class="block p-2 rounded hover:bg-blue-700 transition flex items-center space-x-2">
+                    <span>🚪</span>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    var registros = [[${registros}]];
+    var estudianteData = [[${estudianteData}]];
+    /*]]>*/
+</script>
+
+<script>
+    window.onload = initMap;
+
+    var colorMap = {
+        'BASICO': 'red',
+        'MEDIO': 'blue',
+        'GRADO_UNIVERSITARIO': 'green',
+        'POSTGRADO': 'purple',
+        'DOCTORADO': 'orange'
+    };
+
+    var map;
+    var markers = [];
+    var defaultCenter = {lat: 18.2208, lng: -66.5901};
+    var defaultZoom = 8;
+
+    function initMap() {
+        if (registros.length > 0) {
+            defaultCenter = {
+                lat: parseFloat(registros[0].latitud),
+                lng: parseFloat(registros[0].longitud)
+            };
+        }
+
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: defaultZoom,
+            center: defaultCenter
+        });
+
+        var infoWindow = new google.maps.InfoWindow();
+
+        registros.forEach(function (registro) {
+            var student = estudianteData[registro.estudianteId];
+            var color = student ? colorMap[student.nivelEscolar] : 'gray';
+            var studentName = student ? student.nombre : 'Nombre no disponible';
+
+            var marker = new google.maps.Marker({
+                position: {
+                    lat: parseFloat(registro.latitud),
+                    lng: parseFloat(registro.longitud)
+                },
+                map: map,
+                title: "Estudiante: " + studentName,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: color,
+                    fillOpacity: 1,
+                    strokeColor: color,
+                    strokeOpacity: 0.5,
+                    strokeWeight: 2,
+                    scale: 6
+                }
+            });
+
+            marker.addListener('click', function () {
+                var infoContent = `
+                      <div>
+                          <strong>Estudiante:</strong> ${registro.estudianteId} - ${studentName}<br>
+                          <strong>Usuario:</strong> ${registro.usuarioId || 'No disponible'}<br>
+                          <strong>Ubicación:</strong> (${registro.latitud}, ${registro.longitud})
+                      </div>
+                  `;
+                infoWindow.setContent(infoContent);
+                infoWindow.open(map, marker);
+            });
+
+            markers.push({id: registro.id, marker: marker});
+        });
+
+        document.querySelectorAll("tbody tr").forEach(row => {
+            row.addEventListener("click", function () {
+                var selectedId = this.cells[0].innerText;
+                var selectedMarker = markers.find(m => m.id == selectedId)?.marker;
+                if (selectedMarker) {
+                    map.setCenter(selectedMarker.getPosition());
+                    map.setZoom(15);
+                }
+            });
+        });
+
+        var resetBtn = document.getElementById("reset-map");
+        if (resetBtn) {
+            resetBtn.addEventListener("click", function () {
+                map.setCenter(defaultCenter);
+                map.setZoom(defaultZoom);
+            });
+        }
+
+        var legend = document.createElement('div');
+        legend.classList.add('legend');
+        legend.innerHTML = `
+              <div><strong>Leyenda:</strong></div>
+              <div><span style="color: red;">●</span> Básico</div>
+              <div><span style="color: blue;">●</span> Medio</div>
+              <div><span style="color: green;">●</span> Grado Universitario</div>
+              <div><span style="color: purple;">●</span> Postgrado</div>
+              <div><span style="color: orange;">●</span> Doctorado</div>
+          `;
+        map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(legend);
+    }
+
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            initMap();
+        }
+    });
+</script>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

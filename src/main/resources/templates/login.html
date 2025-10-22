@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Inicio de Sesión - Sistema Académico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Usamos Thymeleaf para inyectar la versión actual -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var currentAppVersion = /*[[${appVersion}]]*/ 'defaultVersion';
+        if (localStorage.getItem("appVersion") !== currentAppVersion) {
+            localStorage.removeItem("authUser");
+            localStorage.setItem("appVersion", currentAppVersion);
+        }
+        /*]]>*/
+    </script>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+<!-- Header -->
+<header class="bg-white shadow-md py-4">
+    <div class="container mx-auto px-6">
+        <h1 class="text-2xl font-bold text-gray-800">Sistema Académico</h1>
+    </div>
+</header>
+
+<!-- Main content -->
+<main class="flex-grow flex items-center justify-center">
+    <div class="w-full max-w-md bg-white rounded-lg shadow-xl p-8 transform transition duration-300">
+        <h2 class="text-3xl font-semibold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+        <!-- Se agrega id="loginForm" para capturar el envío con JavaScript -->
+        <form id="loginForm" action="/login" method="post" class="space-y-6">
+            <div>
+                <label for="username" class="block text-gray-700 font-medium">Usuario</label>
+                <input type="text" id="username" name="username" placeholder="Ingrese su usuario" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300">
+            </div>
+            <div>
+                <label for="password" class="block text-gray-700 font-medium">Contraseña</label>
+                <input type="password" id="password" name="password" placeholder="Ingrese su contraseña" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300">
+            </div>
+            <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold transition duration-300">
+                Ingresar
+            </button>
+        </form>
+
+        <p class="mt-4 text-center text-sm text-gray-600">
+            ¿No tienes cuenta? <a href="/register"
+                                  class="text-blue-500 hover:text-blue-600 font-medium transition duration-300 hover:underline">
+            Regístrate aquí</a>
+        </p>
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-white shadow-inner py-4">
+    <div class="container mx-auto text-center text-gray-600 text-sm">
+        &copy; 2025 Sistema Académico. Todos los derechos reservados.
+    </div>
+</footer>
+
+<!-- Script para manejo de autenticación y redirección -->
+<script>
+    window.addEventListener("load", function() {
+        // Si ya existe un usuario autenticado, redirige al dashboard
+        if (localStorage.getItem("authUser")) {
+            window.location.href = "/dashboard";
+        }
+
+        // Capturamos el envío del formulario de login
+        const loginForm = document.getElementById("loginForm");
+        loginForm.addEventListener("submit", function(e) {
+            e.preventDefault(); // Evita el envío normal
+            const formData = new FormData(loginForm);
+            const username = formData.get("username");
+            const password = formData.get("password");
+
+            if (navigator.onLine) {
+                // Intentar login vía fetch si estamos online
+                fetch("/login", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: new URLSearchParams({ username, password })
+                })
+                    .then(response => {
+                        // Si el servidor redirige (indicando login exitoso)
+                        if (response.redirected) {
+                            // Guarda el usuario autenticado en localStorage
+                            localStorage.setItem("authUser", username);
+                            window.location.href = response.url;
+                        } else {
+                            response.text().then(text => {
+                                alert("Error de autenticación: " + text);
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error durante el login:", err);
+                        alert("Error de conexión. Intenta nuevamente.");
+                    });
+            } else {
+                // Si estamos offline, comprobamos si existe autenticación previa
+                const storedUser = localStorage.getItem("authUser");
+                if (storedUser && storedUser === username) {
+                    window.location.href = "/dashboard";
+                } else {
+                    alert("No hay conexión y no se encuentra autenticación previa para este usuario.");
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>

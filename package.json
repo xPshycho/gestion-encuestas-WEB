@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "tailwindcss": "^2.2.19"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/main/resources/public/css/style.css -o ./src/main/resources/public/css/tailwind.css --watch"
+  },
+  "dependencies": {
+    "postcss": "^8.5.3"
+  }
+}
